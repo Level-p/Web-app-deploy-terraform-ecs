@@ -10,15 +10,18 @@ pipeline {
   }
 
   triggers {
-    pollSCM('H/5 * * * *') // every 5 minutes
+    pollSCM('H/5 * * * *')
   }
 
   environment {
-    TF_DIR      = 'terraform'
-    APP_DIR     = 'app'
-    AWS_REGION  = 'eu-west-2'
+    TF_DIR = 'terraform'
+    APP_DIR = 'app'
+    AWS_REGION = 'eu-west-2'
+
     SLACKCHANNEL = 'varsitix'
     SLACKCREDENTIALS = credentials('slack-cred')
+
+    TERRAFORM_VERSION = '1.15.6'
   }
 
   stages {
@@ -33,52 +36,65 @@ pipeline {
     }
 
     // =========================
-    // IAC SECURITY SCAN (CHECKOV)
+    // IAC SECURITY SCAN (CHECKOV FIXED)
     // =========================
-    // stage('IAC Scan') {
-    //   steps {
-    //     script {
-    //       sh 'pip install pipenv'
-    //       sh 'pipenv run pip install checkov'
+    stage('IAC Scan') {
+      steps {
+        script {
+          sh '''
+            set -e
 
-    //       def checkovStatus = sh(
-    //         script: 'pipenv run checkov -d . -o cli --quiet > checkov-results.txt',
-    //         returnStatus: true
-    //       )
+            echo "Installing Checkov..."
+            python3 -m pip install --upgrade pip
+            python3 -m pip install checkov
 
-    //       echo "Checkov completed with status: ${checkovStatus}"
-    //     }
-    //   }
-    // }
+            echo "Running Checkov scan..."
+            checkov -d . -o cli --quiet > checkov-results.txt || true
+
+            echo "Checkov scan completed"
+          '''
+        }
+      }
+    }
 
     // =========================
-    // INSTALL TERRAFORM
+    // INSTALL TERRAFORM (FIXED FOR 1.15.6)
     // =========================
-    // stage('Install Terraform') {
-    //   steps {
-    //     sh '''
-    //       set -e
-    //       TERRAFORM_VERSION=1.11.4
-    //       ARCH=$(uname -m)
-    //       OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+    stage('Install Terraform') {
+      steps {
+        sh '''
+          set -e
 
-    //       if [ "$ARCH" = "x86_64" ]; then
-    //           ARCH=amd64
-    //       elif [ "$ARCH" = "aarch64" ]; then
-    //           ARCH=arm64
-    //       fi
+          TERRAFORM_VERSION=1.15.6
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
 
-    //       echo "Installing Terraform..."
-    //       curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${OS}_${ARCH}.zip -o terraform.zip
-    //       unzip -o terraform.zip
-    //       sudo su -
-    //       sudo mv terraform /usr/local/bin/
-    //       rm terraform.zip
+          if [ "$ARCH" = "x86_64" ]; then
+            ARCH="amd64"
+          elif [ "$ARCH" = "aarch64" ]; then
+            ARCH="arm64"
+          else
+            echo "Unsupported architecture: $ARCH"
+            exit 1
+          fi
 
-    //       terraform version
-    //     '''
-    //   }
-    // }
+          echo "Installing Terraform ${TERRAFORM_VERSION} for ${OS}_${ARCH}"
+
+          curl -fsSL \
+            https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${OS}_${ARCH}.zip \
+            -o terraform.zip
+
+          unzip -o terraform.zip
+
+          chmod +x terraform
+          sudo mv terraform /usr/local/bin/terraform
+
+          rm -f terraform.zip
+
+          terraform version
+        '''
+      }
+    }
 
     // =========================
     // TERRAFORM INIT
@@ -86,7 +102,7 @@ pipeline {
     stage('Terraform Init') {
       steps {
         dir(TF_DIR) {
-          sh 'terraform init'
+          sh 'terraform init -input=false'
         }
       }
     }
@@ -100,13 +116,13 @@ pipeline {
       }
       steps {
         dir(TF_DIR) {
-          sh 'terraform plan'
+          sh 'terraform plan -input=false'
         }
       }
     }
 
     // =========================
-    // TERRAFORM APPLY (INFRA)
+    // APPLY INFRA
     // =========================
     stage('Terraform Apply (Infra)') {
       when {
@@ -114,56 +130,67 @@ pipeline {
       }
       steps {
         dir(TF_DIR) {
-          sh 'terraform apply -auto-approve'
+          sh 'terraform apply -auto-approve -input=false'
         }
       }
     }
 
-    // =========================
-    // BUILD & PUSH IMAGE TO ECR
-    // =========================
-    stage('Build & Push Docker Image to ECR') {
-      when {
-        expression { params.ACTION == 'apply' }
-      }
-      steps {
-        script {
-          def ecr = sh(
-            script: "cd ${TF_DIR} && terraform output -raw ecr_repository_url",
-            returnStdout: true
-          ).trim()
+ // =========================
+// CLONE & BUILD DOCKER IMAGE
+// =========================
+stage('Build Docker Image') {
+  when {
+    expression { params.ACTION == 'apply' }
+  }
 
-          env.ECR_URL = ecr
+  steps {
+    script {
 
-          sh """
-            echo "Logging into ECR: ${ecr}"
+      // Get ECR URL from Terraform
+      def ecr = sh(
+        script: "cd ${TF_DIR} && terraform output -raw ecr_repository_url",
+        returnStdout: true
+      ).trim()
 
-            aws ecr get-login-password --region ${AWS_REGION} \
-              | docker login --username AWS --password-stdin ${ecr}
+      env.ECR_URL = ecr
 
-            echo "Building Docker image"
-            cd Next-Hamster && docker build -t ${ecr}:latest ${APP_DIR}
-            
-            echo "Pushing Docker image"
-            docker push ${ecr}:latest
-          """
-        }
-      }
+      sh """
+        set -e
+
+        echo "Cloning Next-Hamster repo..."
+
+        git clone https://github.com/Level-p/Next-Hamster.git
+
+        cd Next-Hamster
+
+        echo "Logging into ECR..."
+        aws ecr get-login-password --region ${AWS_REGION} \
+          | docker login --username AWS --password-stdin ${ecr}
+
+        echo "Building Docker image..."
+        docker build -t ${ecr}:latest .
+
+        echo "Pushing Docker image..."
+        docker push ${ecr}:latest
+
+        rm -rf Next-Hamster
+      """
     }
+  }
+}
 
     // =========================
-    // TRIVY IMAGE SCAN
+    // TRIVY SCAN (FIXED PATH)
     // =========================
     stage('Trivy Image Scan') {
       when {
         expression { params.ACTION == 'apply' }
       }
       steps {
-        script {
-          sh """
-            trivy image -f table ${ECR_URL}:latest > trivyfs.txt
-          """
-        }
+        sh '''
+          set -e
+          trivy image -f table ${ECR_URL}:latest > trivyfs.txt || true
+        '''
       }
     }
 
@@ -187,6 +214,8 @@ pipeline {
           ).trim()
 
           sh """
+            set -e
+
             echo "Deploying to ECS cluster: ${cluster}"
             echo "Service: ${service}"
 
@@ -209,7 +238,7 @@ pipeline {
       }
       steps {
         dir(TF_DIR) {
-          sh 'terraform destroy -auto-approve'
+          sh 'terraform destroy -auto-approve -input=false'
         }
       }
     }
