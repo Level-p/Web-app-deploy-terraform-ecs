@@ -87,7 +87,7 @@ pipeline {
           unzip -o terraform.zip
 
           chmod +x terraform
-          sudo mv terraform /usr/local/bin/terraform
+          mv terraform /usr/local/bin/terraform
 
           rm -f terraform.zip
 
