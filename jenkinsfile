@@ -71,7 +71,7 @@ pipeline {
           echo "Installing Terraform..."
           curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${OS}_${ARCH}.zip -o terraform.zip
           unzip -o terraform.zip
-          sudo mv terraform /usr/local/bin/
+          mv terraform /usr/local/bin/
           rm terraform.zip
 
           terraform version
