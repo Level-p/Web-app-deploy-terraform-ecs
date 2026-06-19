@@ -141,8 +141,8 @@ pipeline {
               | docker login --username AWS --password-stdin ${ecr}
 
             echo "Building Docker image"
-            docker build -t ${ecr}:latest ${APP_DIR}
-
+            cd Next-Hamster && docker build -t ${ecr}:latest ${APP_DIR}
+            
             echo "Pushing Docker image"
             docker push ${ecr}:latest
           """
