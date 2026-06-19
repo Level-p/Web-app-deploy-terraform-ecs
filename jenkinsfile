@@ -36,68 +36,6 @@ pipeline {
     }
 
     // =========================
-    // IAC SECURITY SCAN (CHECKOV FIXED)
-    // =========================
-    stage('IAC Scan') {
-      steps {
-        script {
-          sh '''
-            set -e
-
-            echo "Installing Checkov..."
-            python3 -m pip install --upgrade pip
-            python3 -m pip install checkov
-
-            echo "Running Checkov scan..."
-            checkov -d . -o cli --quiet > checkov-results.txt || true
-
-            echo "Checkov scan completed"
-          '''
-        }
-      }
-    }
-
-    // =========================
-    // INSTALL TERRAFORM (FIXED FOR 1.15.6)
-    // =========================
-    stage('Install Terraform') {
-      steps {
-        sh '''
-          set -e
-
-          TERRAFORM_VERSION=1.15.6
-          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-          ARCH=$(uname -m)
-
-          if [ "$ARCH" = "x86_64" ]; then
-            ARCH="amd64"
-          elif [ "$ARCH" = "aarch64" ]; then
-            ARCH="arm64"
-          else
-            echo "Unsupported architecture: $ARCH"
-            exit 1
-          fi
-
-          echo "Installing Terraform ${TERRAFORM_VERSION} for ${OS}_${ARCH}"
-
-          curl -fsSL \
-            https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${OS}_${ARCH}.zip \
-            -o terraform.zip
-
-          unzip -o terraform.zip
-
-          chmod +x terraform
-          
-          mkdir -p $WORKSPACE/tools
-          mv terraform $WORKSPACE/tools/
-
-          env.PATH = "${env.WORKSPACE}/tools:${env.PATH}"
-          terraform version
-        '''
-      }
-    }
-
-    // =========================
     // TERRAFORM INIT
     // =========================
     stage('Terraform Init') {

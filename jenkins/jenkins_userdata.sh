@@ -64,3 +64,7 @@ unzip awscliv2.zip
 sudo ./aws/install
 sudo ln -svf /usr/local/bin/aws /usr/bin/aws
 sudo hostnamectl set-hostname jenkins
+
+sudo dnf install -y yum-utils
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+sudo dnf install -y terraform
