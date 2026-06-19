@@ -54,31 +54,31 @@ pipeline {
     // =========================
     // INSTALL TERRAFORM
     // =========================
-    stage('Install Terraform') {
-      steps {
-        sh '''
-          set -e
-          TERRAFORM_VERSION=1.11.4
-          ARCH=$(uname -m)
-          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+    // stage('Install Terraform') {
+    //   steps {
+    //     sh '''
+    //       set -e
+    //       TERRAFORM_VERSION=1.11.4
+    //       ARCH=$(uname -m)
+    //       OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 
-          if [ "$ARCH" = "x86_64" ]; then
-              ARCH=amd64
-          elif [ "$ARCH" = "aarch64" ]; then
-              ARCH=arm64
-          fi
+    //       if [ "$ARCH" = "x86_64" ]; then
+    //           ARCH=amd64
+    //       elif [ "$ARCH" = "aarch64" ]; then
+    //           ARCH=arm64
+    //       fi
 
-          echo "Installing Terraform..."
-          curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${OS}_${ARCH}.zip -o terraform.zip
-          unzip -o terraform.zip
-          sudo su -
-          sudo mv terraform /usr/local/bin/
-          rm terraform.zip
+    //       echo "Installing Terraform..."
+    //       curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${OS}_${ARCH}.zip -o terraform.zip
+    //       unzip -o terraform.zip
+    //       sudo su -
+    //       sudo mv terraform /usr/local/bin/
+    //       rm terraform.zip
 
-          terraform version
-        '''
-      }
-    }
+    //       terraform version
+    //     '''
+    //   }
+    // }
 
     // =========================
     // TERRAFORM INIT
