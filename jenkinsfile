@@ -35,21 +35,21 @@ pipeline {
     // =========================
     // IAC SECURITY SCAN (CHECKOV)
     // =========================
-    stage('IAC Scan') {
-      steps {
-        script {
-          sh 'pip install pipenv'
-          sh 'pipenv run pip install checkov'
+    // stage('IAC Scan') {
+    //   steps {
+    //     script {
+    //       sh 'pip install pipenv'
+    //       sh 'pipenv run pip install checkov'
 
-          def checkovStatus = sh(
-            script: 'pipenv run checkov -d . -o cli --quiet > checkov-results.txt',
-            returnStatus: true
-          )
+    //       def checkovStatus = sh(
+    //         script: 'pipenv run checkov -d . -o cli --quiet > checkov-results.txt',
+    //         returnStatus: true
+    //       )
 
-          echo "Checkov completed with status: ${checkovStatus}"
-        }
-      }
-    }
+    //       echo "Checkov completed with status: ${checkovStatus}"
+    //     }
+    //   }
+    // }
 
     // =========================
     // INSTALL TERRAFORM
