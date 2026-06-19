@@ -87,7 +87,11 @@ pipeline {
           unzip -o terraform.zip
 
           chmod +x terraform
-          mv terraform /usr/local/bin/terraform
+          
+          mkdir -p $WORKSPACE/tools
+          mv terraform $WORKSPACE/tools/
+
+          export PATH=$WORKSPACE/tools:$PATH
 
           rm -f terraform.zip
 
