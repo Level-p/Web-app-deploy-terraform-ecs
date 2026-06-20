@@ -23,7 +23,7 @@ resource "aws_appautoscaling_target" "ecs_target" {
 
 # ------- AWS Autoscaling policy using CPU allocation -------
 resource "aws_appautoscaling_policy" "cpu" {
-  name               = "ecs_scale_cpu_service_${var.name}"
+  name               = "ecs_scale_cpu_service_steve"
   resource_id        = aws_appautoscaling_target.ecs_target.resource_id
   scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
   service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
@@ -42,7 +42,7 @@ resource "aws_appautoscaling_policy" "cpu" {
 
 # ------- AWS Autoscaling policy using memory allocation -------
 resource "aws_appautoscaling_policy" "memory" {
-  name               = "ecs_scale_memory_service_${var.name}"
+  name               = "ecs_scale_memory_service_steve"
   resource_id        = aws_appautoscaling_target.ecs_target.resource_id
   scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
   service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
@@ -65,8 +65,8 @@ resource "aws_appautoscaling_policy" "memory" {
 
 # ------- High memory alarm -------
 resource "aws_cloudwatch_metric_alarm" "high-memory-policy-alarm" {
-  alarm_name          = "high-memory-ecs-service-${var.name}"
-  alarm_description   = "High Memory for ecs service-${var.name}"
+  alarm_name          = "high-memory-ecs-service-steve"
+  alarm_description   = "High Memory for ecs service-steve"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "2"
   metric_name         = "MemoryUtilization"
@@ -76,7 +76,7 @@ resource "aws_cloudwatch_metric_alarm" "high-memory-policy-alarm" {
   threshold           = 50
 
   dimensions = {
-    "ServiceName" = "Service-${var.name}",
+    "ServiceName" = "Service-steve",
     "ClusterName" = var.cluster_name
   }
 
@@ -84,8 +84,8 @@ resource "aws_cloudwatch_metric_alarm" "high-memory-policy-alarm" {
 
 # ------- High CPU alarm -------
 resource "aws_cloudwatch_metric_alarm" "high-cpu-policy-alarm" {
-  alarm_name          = "high-cpu-ecs-service-${var.name}"
-  alarm_description   = "High CPUPolicy Landing Page for ecs service-${var.name}"
+  alarm_name          = "high-cpu-ecs-service-steve"
+  alarm_description   = "High CPUPolicy Landing Page for ecs service-steve"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
@@ -95,7 +95,7 @@ resource "aws_cloudwatch_metric_alarm" "high-cpu-policy-alarm" {
   threshold           = 50
 
   dimensions = {
-    "ServiceName" = "Service-${var.name}",
+    "ServiceName" = "Service-steve",
     "ClusterName" = var.cluster_name
   }
 
