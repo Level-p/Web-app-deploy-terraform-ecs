@@ -42,7 +42,8 @@ module "autoscale" {
   max_capacity = 5
   min_capacity = 1
   cluster_name = module.cluster.ecs_cluster_name
-  name         = module.service.ecs_service_name
+  ecs_service_name = module.service.ecs_service_name
+  name = "steve"
 }
 
 module "cluster" {
