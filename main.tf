@@ -1,5 +1,5 @@
 locals {
-  name = "Practice-ECS"
+  name = "practice-ecs"
 }
 
 data "aws_route53_zone" "zone" {
