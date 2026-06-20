@@ -3,7 +3,7 @@ provider "aws" {
 }
 terraform {
   backend "s3" {
-    bucket = "varsitix-storage-buckett"
+    bucket = "varsitix-storage-bucket"
     key    = "infrastructure/terraform.tfstate"
     region = "eu-west-2" # Correct region
   }
