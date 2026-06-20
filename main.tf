@@ -53,8 +53,8 @@ module "cluster" {
 module "service" {
   source = "./modules/ecs/Service"
   subnets_id = [
-    module.vpc.public_subnet_ids["pub2"],
-    module.vpc.public_subnet_ids["pub3"]
+    module.vpc.private_subnet_ids["pri3"],
+    module.vpc.private_subnet_ids["pri3"]
   ]
   container_name      = "appContainer"
   container_port      = 3000
