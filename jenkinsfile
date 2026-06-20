@@ -9,6 +9,7 @@ pipeline {
         )
     }
 
+
     triggers {
         pollSCM('* * * * *') // Runs every minute
     }
@@ -16,6 +17,8 @@ pipeline {
     environment {
         TF_DIR = "terraform"
         AWS_REGION = "eu-west-2"
+        SLACKCHANNEL = 'varsitix'
+        SLACKCREDENTIALS = credentials('slack-cred')
     }
 
     stages {
@@ -167,17 +170,28 @@ pipeline {
     }
 
     post {
-
-        success {
-            echo 'Deployment successful'
-        }
-
-        failure {
-            echo 'Deployment failed'
-        }
-
         always {
-            cleanWs()
+            script {
+                slackSend(
+                    channel: SLACKCHANNEL,
+                    color: currentBuild.result == 'SUCCESS' ? 'good' : 'danger',
+                    message: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL}) has been completed."
+                )
+            }
+        }
+        failure {
+            slackSend(
+                channel: SLACKCHANNEL,
+                color: 'danger',
+                message: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' has failed. Check console output at ${env.BUILD_URL}."
+            )
+        }
+        success {
+            slackSend(
+                channel: SLACKCHANNEL,
+                color: 'good',
+                message: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' completed successfully. Check console output at ${env.BUILD_URL}."
+            )
         }
     }
 }
