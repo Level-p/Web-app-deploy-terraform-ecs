@@ -9,6 +9,10 @@ pipeline {
         )
     }
 
+    triggers {
+        pollSCM('* * * * *') // Runs every minute
+    }
+
     environment {
         TF_DIR = "terraform"
         AWS_REGION = "eu-west-2"
