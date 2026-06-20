@@ -108,17 +108,19 @@ pipeline {
                     set -e
 
                     git clone https://github.com/Level-p/Next-Hamster.git
+                    cd Next-Hamster
 
-                    aws ecr get-login-password \
-                    --region ${AWS_REGION} \
+                    echo "Logging into ECR..."
+
+                    aws ecr get-login-password --region ${AWS_REGION} \
                     | docker login \
                     --username AWS \
                     --password-stdin ${ECR_URL}
 
-                    cd Next-Hamster
-
+                    echo "Building image..."
                     docker build -t ${ECR_URL}:latest .
 
+                    echo "Pushing image..."
                     docker push ${ECR_URL}:latest
 
                     rm -rf Next-Hamster
