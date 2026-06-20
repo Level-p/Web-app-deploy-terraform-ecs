@@ -41,11 +41,9 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                dir("${TF_DIR}") {
                     sh '''
-                        terraform init -input=false
+                        terraform init
                     '''
-                }
             }
         }
 
@@ -55,11 +53,9 @@ pipeline {
             }
 
             steps {
-                dir("${TF_DIR}") {
                     sh '''
-                        terraform plan -out=tfplan
+                        terraform plan
                     '''
-                }
             }
         }
 
@@ -69,11 +65,9 @@ pipeline {
             }
 
             steps {
-                dir("${TF_DIR}") {
                     sh '''
                         terraform apply -auto-approve tfplan
                     '''
-                }
             }
         }
 
@@ -86,17 +80,17 @@ pipeline {
                 script {
 
                     env.ECR_URL = sh(
-                        script: "cd ${TF_DIR} && terraform output -raw ecr_repository_url",
+                        script: "terraform output -raw ecr_repository_url",
                         returnStdout: true
                     ).trim()
 
                     env.ECS_CLUSTER = sh(
-                        script: "cd ${TF_DIR} && terraform output -raw ecs_cluster_name",
+                        script: "terraform output -raw ecs_cluster_name",
                         returnStdout: true
                     ).trim()
 
                     env.ECS_SERVICE = sh(
-                        script: "cd ${TF_DIR} && terraform output -raw ecs_service_name",
+                        script: "terraform output -raw ecs_service_name",
                         returnStdout: true
                     ).trim()
                 }
@@ -113,8 +107,6 @@ pipeline {
                 sh '''
                     set -e
 
-                    rm -rf Next-Hamster
-
                     git clone https://github.com/Level-p/Next-Hamster.git
 
                     aws ecr get-login-password \
@@ -128,6 +120,8 @@ pipeline {
                     docker build -t ${ECR_URL}:latest .
 
                     docker push ${ECR_URL}:latest
+
+                    rm -rf Next-Hamster
                 '''
             }
         }
@@ -171,11 +165,9 @@ pipeline {
             }
 
             steps {
-                dir("${TF_DIR}") {
                     sh '''
                         terraform destroy -auto-approve
                     '''
-                }
             }
         }
     }
