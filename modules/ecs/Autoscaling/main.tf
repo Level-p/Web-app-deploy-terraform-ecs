@@ -18,6 +18,8 @@ resource "aws_appautoscaling_target" "ecs_target" {
       role_arn,
     ]
   }
+
+  depends_on = [ var.name]
 }
 
 # ------- AWS Autoscaling policy using CPU allocation -------
