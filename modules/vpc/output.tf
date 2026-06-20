@@ -25,3 +25,6 @@ output "private_key" {
   sensitive = true
 }
 
+output "sgout" {
+  value = aws_security_group.ecs_sg.id
+}

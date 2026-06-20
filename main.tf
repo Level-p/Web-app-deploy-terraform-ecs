@@ -64,7 +64,7 @@ module "service" {
   name                = "${local.name}-service"
   iam_role_ecs = module.iam.ecs_task_role_arn
   desired_tasks       = 1
-  arn_security_group  = "sg-08bbf9256beae0962"
+  arn_security_group  = module.vpc.sgout
 }
 
 module "task_definition" {
