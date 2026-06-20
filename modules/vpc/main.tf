@@ -108,8 +108,8 @@ resource "aws_security_group" "ecs_sg" {
   description = "Allow SSH and HTTPS"
   vpc_id      = aws_vpc.vpc.id
   ingress {
-    from_port   = 8080
-    to_port     = 8080
+    from_port   = 3000
+    to_port     = 3000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
