@@ -1,206 +1,193 @@
 pipeline {
-  agent any
+    agent any
 
-  parameters {
-    choice(
-      name: 'ACTION',
-      choices: ['apply', 'destroy'],
-      description: 'Terraform action'
-    )
-  }
-
-  triggers {
-    pollSCM('H/5 * * * *')
-  }
-
-  environment {
-    TF_DIR = 'terraform'
-    APP_DIR = 'app'
-    AWS_REGION = 'eu-west-2'
-
-    SLACKCHANNEL = 'varsitix'
-    SLACKCREDENTIALS = credentials('slack-cred')
-
-    TERRAFORM_VERSION = '1.15.6'
-  }
-
-  stages {
-
-    // =========================
-    // CHECKOUT
-    // =========================
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['apply', 'destroy'],
+            description: 'Terraform action'
+        )
     }
 
-    // =========================
-    // TERRAFORM INIT
-    // =========================
-    stage('Terraform Init') {
-      steps {
-        dir(TF_DIR) {
-          sh 'terraform init -input=false'
+    environment {
+        TF_DIR = "terraform"
+        AWS_REGION = "eu-west-2"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
         }
-      }
-    }
 
-    // =========================
-    // TERRAFORM PLAN
-    // =========================
-    stage('Terraform Plan') {
-      when {
-        expression { params.ACTION == 'apply' }
-      }
-      steps {
-        dir(TF_DIR) {
-          sh 'terraform plan -input=false'
+        stage('Verify Tools') {
+            steps {
+                sh '''
+                    set -e
+
+                    which git
+                    which aws
+                    which docker
+                    which terraform
+                '''
+            }
         }
-      }
-    }
 
-    // =========================
-    // APPLY INFRA
-    // =========================
-    stage('Terraform Apply (Infra)') {
-      when {
-        expression { params.ACTION == 'apply' }
-      }
-      steps {
-        dir(TF_DIR) {
-          sh 'terraform apply -auto-approve -input=false'
+        stage('Terraform Init') {
+            steps {
+                dir("${TF_DIR}") {
+                    sh '''
+                        terraform init -input=false
+                    '''
+                }
+            }
         }
-      }
-    }
 
- // =========================
-// CLONE & BUILD DOCKER IMAGE
-// =========================
-stage('Build Docker Image') {
-  when {
-    expression { params.ACTION == 'apply' }
-  }
+        stage('Terraform Plan') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
 
-  steps {
-    script {
-
-      // Get ECR URL from Terraform
-      def ecr = sh(
-        script: "cd ${TF_DIR} && terraform output -raw ecr_repository_url",
-        returnStdout: true
-      ).trim()
-
-      env.ECR_URL = ecr
-
-      sh """
-        set -e
-
-        echo "Cloning Next-Hamster repo..."
-
-        git clone https://github.com/Level-p/Next-Hamster.git
-
-        cd Next-Hamster
-
-        echo "Logging into ECR..."
-        aws ecr get-login-password --region ${AWS_REGION} \
-          | docker login --username AWS --password-stdin ${ecr}
-
-        echo "Building Docker image..."
-        docker build -t ${ecr}:latest .
-
-        echo "Pushing Docker image..."
-        docker push ${ecr}:latest
-
-        rm -rf Next-Hamster
-      """
-    }
-  }
-}
-
-    // =========================
-    // TRIVY SCAN (FIXED PATH)
-    // =========================
-    stage('Trivy Image Scan') {
-      when {
-        expression { params.ACTION == 'apply' }
-      }
-      steps {
-        sh '''
-          set -e
-          trivy image -f table ${ECR_URL}:latest > trivyfs.txt || true
-        '''
-      }
-    }
-
-    // =========================
-    // DEPLOY TO ECS
-    // =========================
-    stage('Deploy to ECS') {
-      when {
-        expression { params.ACTION == 'apply' }
-      }
-      steps {
-        script {
-          def cluster = sh(
-            script: "cd ${TF_DIR} && terraform output -raw ecs_cluster_name",
-            returnStdout: true
-          ).trim()
-
-          def service = sh(
-            script: "cd ${TF_DIR} && terraform output -raw ecs_service_name",
-            returnStdout: true
-          ).trim()
-
-          sh """
-            set -e
-
-            echo "Deploying to ECS cluster: ${cluster}"
-            echo "Service: ${service}"
-
-            aws ecs update-service \
-              --cluster ${cluster} \
-              --service ${service} \
-              --force-new-deployment \
-              --region ${AWS_REGION}
-          """
+            steps {
+                dir("${TF_DIR}") {
+                    sh '''
+                        terraform plan -out=tfplan
+                    '''
+                }
+            }
         }
-      }
-    }
 
-    // =========================
-    // DESTROY INFRA
-    // =========================
-    stage('Terraform Destroy') {
-      when {
-        expression { params.ACTION == 'destroy' }
-      }
-      steps {
-        dir(TF_DIR) {
-          sh 'terraform destroy -auto-approve -input=false'
+        stage('Terraform Apply') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
+
+            steps {
+                dir("${TF_DIR}") {
+                    sh '''
+                        terraform apply -auto-approve tfplan
+                    '''
+                }
+            }
         }
-      }
-    }
-  }
 
-  // =========================
-  // POST ACTIONS (SLACK)
-  // =========================
-  post {
-    always {
-      slackSend(
-        channel: SLACKCHANNEL,
-        color: currentBuild.result == 'SUCCESS' ? 'good' : 'danger',
-        message: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' finished with status: ${currentBuild.result}. ${env.BUILD_URL}"
-      )
+        stage('Get Terraform Outputs') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
+
+            steps {
+                script {
+
+                    env.ECR_URL = sh(
+                        script: "cd ${TF_DIR} && terraform output -raw ecr_repository_url",
+                        returnStdout: true
+                    ).trim()
+
+                    env.ECS_CLUSTER = sh(
+                        script: "cd ${TF_DIR} && terraform output -raw ecs_cluster_name",
+                        returnStdout: true
+                    ).trim()
+
+                    env.ECS_SERVICE = sh(
+                        script: "cd ${TF_DIR} && terraform output -raw ecs_service_name",
+                        returnStdout: true
+                    ).trim()
+                }
+            }
+        }
+
+        stage('Build And Push Image') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
+
+            steps {
+
+                sh '''
+                    set -e
+
+                    rm -rf Next-Hamster
+
+                    git clone https://github.com/Level-p/Next-Hamster.git
+
+                    aws ecr get-login-password \
+                    --region ${AWS_REGION} \
+                    | docker login \
+                    --username AWS \
+                    --password-stdin ${ECR_URL}
+
+                    cd Next-Hamster
+
+                    docker build -t ${ECR_URL}:latest .
+
+                    docker push ${ECR_URL}:latest
+                '''
+            }
+        }
+
+        stage('Trivy Scan') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
+
+            steps {
+                sh '''
+                    if command -v trivy >/dev/null 2>&1; then
+                        trivy image ${ECR_URL}:latest
+                    else
+                        echo "Trivy not installed. Skipping scan."
+                    fi
+                '''
+            }
+        }
+
+        stage('Deploy ECS') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
+
+            steps {
+
+                sh '''
+                    aws ecs update-service \
+                        --cluster ${ECS_CLUSTER} \
+                        --service ${ECS_SERVICE} \
+                        --force-new-deployment \
+                        --region ${AWS_REGION}
+                '''
+            }
+        }
+
+        stage('Terraform Destroy') {
+            when {
+                expression { params.ACTION == 'destroy' }
+            }
+
+            steps {
+                dir("${TF_DIR}") {
+                    sh '''
+                        terraform destroy -auto-approve
+                    '''
+                }
+            }
+        }
     }
 
-    success {
-      echo "Pipeline SUCCESS (ACTION=${params.ACTION})"
-    }
+    post {
 
-    failure {
-      echo "Pipeline FAILED (ACTION=${params.ACTION})"
+        success {
+            echo 'Deployment successful'
+        }
+
+        failure {
+            echo 'Deployment failed'
+        }
+
+        always {
+            cleanWs()
+        }
     }
-  }
 }

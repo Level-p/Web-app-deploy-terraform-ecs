@@ -64,7 +64,7 @@ module "service" {
   name                = "${local.name}-service"
   iam-role-ecs = module.iam.ecs_task_role_arn
   desired_tasks       = 1
-  arn_security_group  = "arn:aws:ec2:eu-west-2:127214197057:security-group/sg-04bd1e664d10bb7a9"
+  arn_security_group  = "arn:aws:ec2:eu-west-2:127214197057:security-group/sg-07d4905387e065bcf"
 }
 
 module "task_definition" {
