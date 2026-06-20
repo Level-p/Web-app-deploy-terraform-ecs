@@ -112,10 +112,7 @@ pipeline {
 
                     echo "ECR_URL=$ECR_URL"
 
-                    aws ecr get-login-password --region $AWS_REGION \
-                    | docker login \
-                      --username AWS \
-                      --password-stdin $ECR_URL
+                    aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin $ECR_URL
 
                     docker build -t $ECR_URL:latest .
                     docker push $ECR_URL:latest
