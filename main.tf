@@ -62,7 +62,7 @@ module "service" {
   arn_target_group    = module.alb.arn_target_group
   arn_task_definition = module.task_definition.arn_task_definition
   name                = "${local.name}-service"
-  iam-role-ecs = module.iam.ecs_task_role_arn
+  iam_role_ecs = module.iam.ecs_task_role_arn
   desired_tasks       = 1
   arn_security_group  = "arn:aws:ec2:eu-west-2:127214197057:security-group/sg-07d4905387e065bcf"
 }

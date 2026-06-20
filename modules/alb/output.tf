@@ -1,5 +1,5 @@
 output "prod-sg" {
-  value       = aws_security_group.prod-elb-sg.id
+  value       = aws_security_group.prod_elb_sg.id
   description = "Security group ID for the prod environment"
 }
 
@@ -8,5 +8,5 @@ output "laravel_dns" {
 }
 
 output "arn_target_group" {
-  value = aws_lb_target_group.prod-target-group.arn
+  value = aws_lb_target_group.prod_target_group.arn
 }

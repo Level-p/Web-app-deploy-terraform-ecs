@@ -12,7 +12,7 @@ resource "aws_ecs_service" "ecs_service" {
   desired_count                     = var.desired_tasks
   health_check_grace_period_seconds = 10
   launch_type                       = "FARGATE"
-  iam_role        = var.iam-role-ecs
+  iam_role        = var.iam_role_ecs
 
   ordered_placement_strategy {
     type  = "binpack"

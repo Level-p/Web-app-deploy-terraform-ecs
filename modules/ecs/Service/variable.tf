@@ -46,7 +46,7 @@ variable "container_name" {
   type        = string
 }
 
-variable "iam-role-ecs" {
+variable "iam_role_ecs" {
   description = "The name of the container"
   type        = string
 }

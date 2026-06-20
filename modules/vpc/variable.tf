@@ -17,8 +17,8 @@ variable "public_subnets" {
     az   = string
   }))
   default = {
-    pub2 = { cidr = "10.0.2.0/24", az = "af-south-1b" }
-    pub3 = { cidr = "10.0.3.0/24", az = "af-south-1c" }
+    pub2 = { cidr = "10.0.2.0/24", az = "eu-west-2b" }
+    pub3 = { cidr = "10.0.3.0/24", az = "eu-west-2c" }
   }
 }
 
@@ -29,8 +29,8 @@ variable "private_subnets" {
     az   = string
   }))
   default = {
-    pri2 = { cidr = "10.0.5.0/24", az = "af-south-1b" }
-    pri3 = { cidr = "10.0.6.0/24", az = "af-south-1c" }
+    pri2 = { cidr = "10.0.5.0/24", az = "eu-west-2b" }
+    pri3 = { cidr = "10.0.6.0/24", az = "eu-west-2c" }
   }
 }
 
