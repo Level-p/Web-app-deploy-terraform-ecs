@@ -14,6 +14,22 @@ data "aws_acm_certificate" "cert" {
   most_recent = true
 }
 
+resource "aws_secretsmanager_secret" "app_secrets" {
+  name = "jenkins-secrets"
+}
+
+resource "aws_secretsmanager_secret_version" "app_secrets" {
+  secret_id = aws_secretsmanager_secret.app_secrets.id
+
+  secret_string = jsonencode({
+    GOOGLE_CLIENT_ID = var.GOOGLE_CLIENT_ID
+    GOOGLE_CLIENT_SECRET = var.GOOGLE_CLIENT_SECRET
+    NEXTAUTH_SECRET = var.NEXTAUTH_SECRET
+    NEXTAUTH_URL = var.NEXTAUTH_URL
+    NEXT_PUBLIC_FIREBASE_API_KEY = var.NEXT_PUBLIC_FIREBASE_API_KEY
+  })
+}
+
 module "vpc" {
   source              = "./modules/vpc"
   name                = local.name
@@ -69,15 +85,15 @@ module "service" {
 
 module "task_definition" {
   source             = "./modules/ecs/TaskDefinition"
-  cpu                = 256
-  memory             = "512"
+  cpu                = 1024
+  memory             = "2048"
   region             = "eu-west-2"
   docker_repo        = module.ecr.ecr_repository_url
   container_port     = 3000
   container_name     = "appContainer"
   name               = "${local.name}-task-def"
   execution_role_arn = module.iam.ecs_task_execution_role_arn
-
+  secret_arn = aws_secretsmanager_secret.app_secrets.arn
 }
 
 module "iam" {

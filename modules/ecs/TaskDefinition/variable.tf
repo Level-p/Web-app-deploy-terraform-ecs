@@ -47,25 +47,7 @@ variable "container_port" {
   type        = number
 }
 
-variable "environment_variables" {
-  description = "List of environment variables for ECS container"
-  type = list(object({
-    name  = string
-    value = string
-  }))
-  default = []
+variable "secret_arn" {
+  description = "Pull secrets string from AWS secret manager"
+  type        = number
 }
-# environment_variables = [
-#   {
-#     name  = "NODE_ENV"
-#     value = "production"
-#   },
-#   {
-#     name  = "API_URL"
-#     value = "https://api.example.com"
-#   },
-#   {
-#     name  = "PORT"
-#     value = "3000"
-#   }
-# ]

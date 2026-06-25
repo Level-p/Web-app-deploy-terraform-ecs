@@ -1,3 +1,202 @@
+// pipeline {
+//     agent any
+
+//     parameters {
+//         choice(
+//             name: 'ACTION',
+//             choices: ['apply', 'destroy'],
+//             description: 'Terraform action'
+//         )
+//     }
+
+
+//     triggers {
+//         pollSCM('* * * * *') // Runs every minute
+//     }
+
+//     environment {
+//         TF_DIR = "terraform"
+//         AWS_REGION = "eu-west-2"
+//         SLACKCHANNEL = 'varsitix'
+//         SLACKCREDENTIALS = credentials('slack-cred')
+//     }
+
+//     stages {
+
+//         stage('Checkout') {
+//             steps {
+//                 checkout scm
+//             }
+//         }
+
+//         stage('Verify Tools') {
+//             steps {
+//                 sh '''
+//                     set -e
+
+//                     which git
+//                     which aws
+//                     which docker
+//                     which terraform
+//                 '''
+//             }
+//         }
+
+//         stage('Terraform Init') {
+//             steps {
+//                     sh '''
+//                         terraform init
+//                     '''
+//             }
+//         }
+
+//         stage('Terraform Plan') {
+//             when {
+//                 expression { params.ACTION == 'apply' }
+//             }
+
+//             steps {
+//                     sh '''
+//                         terraform plan
+//                     '''
+//             }
+//         }
+
+//         stage('Terraform Apply') {
+//             when {
+//                 expression { params.ACTION == 'apply' }
+//             }
+
+//             steps {
+//                     sh '''
+//                         terraform apply -auto-approve
+//                     '''
+//             }
+//         }
+
+//         stage('Get Terraform Outputs') {
+//             when {
+//                 expression { params.ACTION == 'apply' }
+//             }
+
+//             steps {
+//                 script {
+
+//                     env.ECR_URL = sh(
+//                         script: "terraform output -raw ecr_repository_url",
+//                         returnStdout: true
+//                     ).trim()
+
+//                     env.ECS_CLUSTER = sh(
+//                         script: "terraform output -raw ecs_cluster_name",
+//                         returnStdout: true
+//                     ).trim()
+
+//                     env.ECS_SERVICE = sh(
+//                         script: "terraform output -raw ecs_service_name",
+//                         returnStdout: true
+//                     ).trim()
+//                 }
+//             }
+//         }
+
+//         stage('Build And Push Image') {
+//             when {
+//                 expression { params.ACTION == 'apply' }
+//             }
+
+//             steps {
+//                 sh '''
+//                     set -e
+
+//                     rm -rf Next-Hamster
+//                     git clone https://github.com/Level-p/Next-Hamster.git
+//                     cd Next-Hamster
+
+//                     echo "ECR_URL=$ECR_URL"
+
+//                     aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin $ECR_URL
+
+//                     docker build -t $ECR_URL:latest .
+//                     docker push $ECR_URL:latest
+//                 '''
+//             }
+//         }
+
+//         stage('Trivy Scan') {
+//             when {
+//                 expression { params.ACTION == 'apply' }
+//             }
+
+//             steps {
+//                 sh '''
+//                     if command -v trivy >/dev/null 2>&1; then
+//                         trivy image ${ECR_URL}:latest
+//                     else
+//                         echo "Trivy not installed. Skipping scan."
+//                     fi
+//                 '''
+//             }
+//         }
+
+//         stage('Deploy ECS') {
+//             when {
+//                 expression { params.ACTION == 'apply' }
+//             }
+
+//             steps {
+
+//                 sh '''
+//                     aws ecs update-service \
+//                         --cluster ${ECS_CLUSTER} \
+//                         --service ${ECS_SERVICE} \
+//                         --force-new-deployment \
+//                         --region ${AWS_REGION}
+//                 '''
+//             }
+//         }
+
+//         stage('Terraform Destroy') {
+//             when {
+//                 expression { params.ACTION == 'destroy' }
+//             }
+
+//             steps {
+//                     sh '''
+//                         terraform destroy -auto-approve
+//                     '''
+//             }
+//         }
+//     }
+
+//     post {
+//         always {
+//             script {
+//                 slackSend(
+//                     channel: SLACKCHANNEL,
+//                     color: currentBuild.result == 'SUCCESS' ? 'good' : 'danger',
+//                     message: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL}) has been completed."
+//                 )
+//             }
+//         }
+//         failure {
+//             slackSend(
+//                 channel: SLACKCHANNEL,
+//                 color: 'danger',
+//                 message: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' has failed. Check console output at ${env.BUILD_URL}."
+//             )
+//         }
+//         success {
+//             slackSend(
+//                 channel: SLACKCHANNEL,
+//                 color: 'good',
+//                 message: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' completed successfully. Check console output at ${env.BUILD_URL}."
+//             )
+//         }
+//     }
+// }
+
+
 pipeline {
     agent any
 
@@ -8,7 +207,6 @@ pipeline {
             description: 'Terraform action'
         )
     }
-
 
     triggers {
         pollSCM('* * * * *') // Runs every minute
@@ -42,11 +240,24 @@ pipeline {
             }
         }
 
+        stage('Load Terraform tfvars') {
+            steps {
+                withCredentials([file(credentialsId: 'terraform-tfvars', variable: 'TFVARS_FILE')]) {
+                    sh '''
+                        cp "$TFVARS_FILE" terraform.tfvars
+                        chmod 600 terraform.tfvars
+
+                        echo "terraform.tfvars loaded successfully"
+                    '''
+                }
+            }
+        }
+
         stage('Terraform Init') {
             steps {
-                    sh '''
-                        terraform init
-                    '''
+                sh '''
+                    terraform init
+                '''
             }
         }
 
@@ -56,9 +267,9 @@ pipeline {
             }
 
             steps {
-                    sh '''
-                        terraform plan
-                    '''
+                sh '''
+                    terraform plan
+                '''
             }
         }
 
@@ -68,9 +279,9 @@ pipeline {
             }
 
             steps {
-                    sh '''
-                        terraform apply -auto-approve
-                    '''
+                sh '''
+                    terraform apply -auto-approve
+                '''
             }
         }
 
@@ -145,7 +356,6 @@ pipeline {
             }
 
             steps {
-
                 sh '''
                     aws ecs update-service \
                         --cluster ${ECS_CLUSTER} \
@@ -162,9 +372,9 @@ pipeline {
             }
 
             steps {
-                    sh '''
-                        terraform destroy -auto-approve
-                    '''
+                sh '''
+                    terraform destroy -auto-approve
+                '''
             }
         }
     }
@@ -179,6 +389,7 @@ pipeline {
                 )
             }
         }
+
         failure {
             slackSend(
                 channel: SLACKCHANNEL,
@@ -186,6 +397,7 @@ pipeline {
                 message: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' has failed. Check console output at ${env.BUILD_URL}."
             )
         }
+
         success {
             slackSend(
                 channel: SLACKCHANNEL,
