@@ -244,10 +244,8 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: 'terraform-tfvars', variable: 'TFVARS_FILE')]) {
                     sh '''
-                        cp "$TFVARS_FILE" terraform.tfvars
-                        chmod 600 terraform.tfvars
-
-                        echo "terraform.tfvars loaded successfully"
+                        cp "$TFVARS_FILE" ${TF_DIR}/terraform.tfvars
+                        chmod 600 ${TF_DIR}/terraform.tfvars
                     '''
                 }
             }
