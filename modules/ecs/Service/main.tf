@@ -12,6 +12,7 @@ resource "aws_ecs_service" "ecs_service" {
   desired_count                     = var.desired_tasks
   health_check_grace_period_seconds = 10
   launch_type                       = "FARGATE"
+  enable_execute_command = true
 
 
   network_configuration {
