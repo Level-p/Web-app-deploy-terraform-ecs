@@ -47,7 +47,3 @@ variable "container_port" {
   type        = number
 }
 
-variable "secret_arn" {
-  description = "Pull secrets string from AWS secret manager"
-  type        = string
-}
