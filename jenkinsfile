@@ -42,17 +42,17 @@ pipeline {
             }
         }
 
-        // stage('Load Terraform tfvars') {
-        //     steps {
-        //         withCredentials([file(credentialsId: 'terraform.tfvars', variable: 'TFVARS_FILE')]) {
-        //             sh '''
-        //                 cp "$TFVARS_FILE" terraform.tfvars
-        //                 chmod 600 terraform.tfvars
-        //                 ls -la terraform.tfvars
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Load Terraform tfvars') {
+            steps {
+                withCredentials([file(credentialsId: 'terraform.tfvars', variable: 'TFVARS_FILE')]) {
+                    sh '''
+                        cp "$TFVARS_FILE" terraform.tfvars
+                        chmod 600 terraform.tfvars
+                        ls -la terraform.tfvars
+                    '''
+                }
+            }
+        }
 
         stage('Terraform Init') {
             steps {
