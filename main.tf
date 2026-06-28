@@ -91,6 +91,7 @@ module "task_definition" {
   container_name     = "appContainer"
   name               = "${local.name}-task-def"
   execution_role_arn = module.iam.ecs_task_execution_role_arn
+  task_role_arn = module.iam.ecs_task_role_arn
   secret_arn = aws_secretsmanager_secret.app_secrets.arn
 }
 
