@@ -29,7 +29,7 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
 }
 
 module "vpc" {
-  source              = "./modules/vpc"
+  source              = "./modules/networking"
   name                = local.name
   acm_certificate_arn = data.aws_acm_certificate.cert.arn
 }
