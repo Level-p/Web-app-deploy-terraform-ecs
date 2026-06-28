@@ -14,7 +14,19 @@ data "aws_acm_certificate" "cert" {
   most_recent = true
 }
 
+#calling acm certificate
+resource "aws_secretsmanager_secret" "app_secrets" {
+  name = "jenkins3-secrets"
+}
 
+resource "aws_secretsmanager_secret_version" "app_secrets" {
+  secret_id = aws_secretsmanager_secret.app_secrets.id
+
+  secret_string = jsonencode({
+    AS_API_KEY = var.AS_API_KEY
+    MOVIE_API_KEY = var.MOVIE_API_KEY
+  })
+}
 
 module "vpc" {
   source              = "./modules/vpc"
@@ -55,7 +67,7 @@ module "cluster" {
 module "service" {
   source = "./modules/ecs/Service"
   subnets_id = [
-    module.vpc.private_subnet_ids["pri3"],
+    module.vpc.private_subnet_ids["pri2"],
     module.vpc.private_subnet_ids["pri3"]
   ]
   container_name      = "appContainer"
@@ -79,13 +91,9 @@ module "task_definition" {
   container_name     = "appContainer"
   name               = "${local.name}-task-def"
   execution_role_arn = module.iam.ecs_task_execution_role_arn
+  secret_arn = aws_secretsmanager_secret.app_secrets.arn
 }
 
 module "iam" {
   source = "./modules/iam"
-}
-
-
-variable "domain_name" {
-  default = "mfon21.space"
 }

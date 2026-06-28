@@ -31,6 +31,17 @@ resource "aws_ecs_task_definition" "ecs_task_definition" {
         }
       ]
 
+        secrets = [
+      {
+        name  = "AS_API_KEY"
+        valueFrom = "${var.secret_arn}:AS_API_KEY::"
+      },
+      {
+        name  = "MOVIE_API_KEY"
+        valueFrom = "${var.secret_arn}:MOVIE_API_KEY::"
+      }   
+    ]
+
       logConfiguration = {
         logDriver = "awslogs"
 
