@@ -16,7 +16,7 @@ data "aws_acm_certificate" "cert" {
 
 #calling acm certificate
 resource "aws_secretsmanager_secret" "app_secrets" {
-  name = "jenkins3-secrets"
+  name = "jenkins4-secrets"
 }
 
 resource "aws_secretsmanager_secret_version" "app_secrets" {
